@@ -15,6 +15,7 @@ class TaskManager:
             self.threads.append(thread)
 
     def finish(self):
+        self.tasks.join()
         for _ in self.threads:
             self.add(None)
         self.tasks.join()

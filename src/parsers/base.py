@@ -12,6 +12,7 @@ class BasePageParser:
 
     def download(self):
         """ Скачиваем содержимое страницы """
+        print('DOWNLOADING: {}'.format(self.url))
         self.html = html.fromstring(requests.get(self.url).text)
 
     def _to_date(self, string, frmt='%m/%d/%Y'):

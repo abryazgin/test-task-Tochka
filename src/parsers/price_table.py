@@ -5,7 +5,7 @@ from .base import BaseTablePageParser
 
 
 def parse_prices(symbol):
-    url = config.SITE_PRICES_URL.format(symbol=symbol)
+    url = config.SITE_PRICES_URL.format(symbol=symbol.lower())
     return PricePageParser(url)
 
 

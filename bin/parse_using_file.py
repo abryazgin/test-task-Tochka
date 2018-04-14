@@ -8,14 +8,17 @@ rootdir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 sys.path.append(os.path.join(rootdir, 'src'))
 
+
+import config
 from main import db
 from parsers import parse_prices, parse_trade
+from task_manager import TaskManager
 import controllers as ctl
 
 
 @click.command()
 @click.argument(
-    'filename',
+    'filepath',
     type=click.Path(
         exists=True,
         file_okay=True,
@@ -25,18 +28,40 @@ import controllers as ctl
         resolve_path=True,
     )
 )
-def parse_using_file(filename):
-    with open(filename) as f:
+@click.argument('n', type=click.INT, default=1)
+def parse_using_file(filepath, n):
+    """
+    Собственно загрузка данных
+
+     Создаем менеджер задач, читаем из файла код акции и тут же кладем задания
+     на скачивание данныъ по этой акции
+
+     В конце ждем выполнения всех задач и выходим
+
+    :param filepath: путь до файла
+    :param n: количество потоков для скачивания
+    :return:
+    """
+    tm = TaskManager(n)
+    with open(filepath) as f:
         for symbol in f:
             symbol = symbol.strip().upper()
-            parse_and_save_symbol_info(symbol=symbol)
+            create_tasks(symbol=symbol, tm=tm)
+
+    tm.finish()
 
 
-def parse_and_save_symbol_info(symbol):
-    print('work with `{}`'.format(symbol))
+def create_tasks(symbol, tm):
+    """ Формируем задания на скачивание данных по конкретной акции """
     ctl.company.get_or_save(session=db.session, code=symbol)
-    print('* save prices')
-    for price_row in parse_prices(symbol=symbol):
+    tm.add(task_save_prices, (symbol, ))
+    tm.add(task_save_trades_with_subpages, (symbol, tm, ))
+
+
+def task_save_prices(symbol):
+    """ Сохранение цен на акции """
+    parser = parse_prices(symbol=symbol)
+    for price_row in parser:
         ctl.stockprice.get_or_save(
             session=db.session,
             company_code=symbol,
@@ -47,8 +72,33 @@ def parse_and_save_symbol_info(symbol):
             close=price_row.close,
             volume=price_row.volume)
         db.session.commit()
-    print('* save trades')
-    for trade_row in parse_trade(symbol=symbol):
+
+
+def task_save_trades_with_subpages(symbol, tm):
+    """
+    Скачиваем первую страницу операций, смотрим сколько всего страниц указано
+    И ставим необходимые на скачивание
+    """
+    parser = parse_trade(symbol=symbol, page=1)
+    page_limit = min(
+        parser.get_max_page_number(), config.SITE_TRADES_PAGE_LIMIT)
+    for new_page_number in range(2, page_limit + 1):
+        # стивим задачи на скачивание следующих страниц
+        tm.add(task_save_trades, (symbol, new_page_number))
+    save_trades(parser, symbol, 1)
+
+
+def task_save_trades(symbol, page_number):
+    """
+    Скачиваем произвольную страницу операций
+    """
+    parser = parse_trade(symbol=symbol, page=page_number)
+    save_trades(parser, symbol, page_number)
+
+
+def save_trades(parser, symbol, page_number):
+    """ Сохранение страницы операций в БД """
+    for trade_row in parser:
         ctl.relationtype.get_or_save(
             session=db.session, code=trade_row.relation)
         ctl.ownertype.get_or_save(

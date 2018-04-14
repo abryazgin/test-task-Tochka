@@ -4,8 +4,8 @@ from collections import namedtuple
 from .base import BaseTablePageParser
 
 
-def parse_trade(symbol):
-    url = config.SITE_TRADES_URL.format(symbol=symbol)
+def parse_trade(symbol, page=1):
+    url = config.SITE_TRADES_URL.format(symbol=symbol.lower(), n=page)
     return TradePageParser(url)
 
 
@@ -16,10 +16,23 @@ RowTradePage = namedtuple('RowTradePage', (
 
 
 class TradePageParser(BaseTablePageParser):
+
+    def get_max_page_number(self):
+        """ Ищем количество страниц по акциям (работаем с pager) """
+        pages = self.html.xpath(
+            './/ul[@id = "pager"]/ul[@class = "pager"]/li/a')
+        max_page_number = 1
+        for page_obj in pages:
+            if page_obj.text.isdigit():
+                cur_number = int(page_obj.text)
+                if cur_number > max_page_number:
+                    max_page_number = cur_number
+        return max_page_number
+
     def _get_table(self):
         """ Ищем таблицу с данными (работаем с tbody) """
-        return list(self.html.xpath(
-            './/div[@class = "genTable"]/table'))[0][1:]
+        return self.html.xpath(
+            './/div[@class = "genTable"]/table')[0][1:]
 
     def _prepare_row(self, row_obj):
         """ Подготавливаем строку чистых данных (работаем с tr)"""
