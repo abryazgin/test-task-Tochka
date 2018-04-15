@@ -54,6 +54,7 @@ def parse_using_file(filepath, n):
 def create_tasks(symbol, tm):
     """ Формируем задания на скачивание данных по конкретной акции """
     ctl.company.get_or_save(session=db.session, code=symbol)
+    db.session.commit()
     tm.add(task_save_prices, (symbol, ))
     tm.add(task_save_trades_with_subpages, (symbol, tm, ))
 
@@ -85,7 +86,7 @@ def task_save_trades_with_subpages(symbol, tm):
     for new_page_number in range(2, page_limit + 1):
         # стивим задачи на скачивание следующих страниц
         tm.add(task_save_trades, (symbol, new_page_number))
-    save_trades(parser, symbol, 1)
+    save_trades(parser, symbol)
 
 
 def task_save_trades(symbol, page_number):
@@ -93,10 +94,10 @@ def task_save_trades(symbol, page_number):
     Скачиваем произвольную страницу операций
     """
     parser = parse_trade(symbol=symbol, page=page_number)
-    save_trades(parser, symbol, page_number)
+    save_trades(parser, symbol)
 
 
-def save_trades(parser, symbol, page_number):
+def save_trades(parser, symbol):
     """ Сохранение страницы операций в БД """
     for trade_row in parser:
         ctl.relationtype.get_or_save(

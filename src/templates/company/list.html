@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block body %}
+  <div class=companies>
+      <h2>Stocks:</h2>
+          {% if companies %}
+                <table>
+                {% for company in companies %}
+                <tr>
+                  <td>"{{ company.code }}"</td>
+                  <td><a href="{{ url_for('prices', company_code=company.code) }}">prices</a></td>
+                  <td><a href="{{ url_for('trades', company_code=company.code) }}">trades</a></td>
+                  <td><a href="{{ url_for('price_delta', company_code=company.code) }}">analytics</a></td>
+                  <td><a href="{{ url_for('price_delta_intervals', company_code=company.code, value=10, type='open') }}">delta `open`</a></td>
+                  <td><a href="{{ url_for('price_delta_intervals', company_code=company.code, value=10, type='high') }}">delta `high`</a></td>
+                  <td><a href="{{ url_for('price_delta_intervals', company_code=company.code, value=10, type='low') }}">delta `low`</a></td>
+                  <td><a href="{{ url_for('price_delta_intervals', company_code=company.code, value=10, type='close') }}">delta `close`</a></td>
+                </tr>
+                {% endfor %}
+            </table>
+          {% else %}
+          <em>No data</em>
+          {% endif %}
+  </div>
+{% endblock %}

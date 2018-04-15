@@ -1,0 +1,22 @@
+{% if intervals %}
+    <div>
+        <table>
+            <tr>
+                <th> date from </th>
+                <th> date to </th>
+                <th> delta </th>
+                <th> day count </th>
+            </tr>
+            {% for interval in intervals %}
+            <tr>
+                <td>{{ interval.from_date or '' }}</td>
+                <td>{{ interval.to_date or '' }}</td>
+                <td>{{ interval.delta or '' }}</td>
+                <td>{{ interval.length or '' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% else %}
+    <li><em>No data</em>
+{% endif %}

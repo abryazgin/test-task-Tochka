@@ -1,0 +1,26 @@
+{% if prices %}
+    <div>
+        <table>
+            <tr>
+                <th> date </th>
+                <th> high </th>
+                <th> low </th>
+                <th> open </th>
+                <th> close </th>
+                <th> volume </th>
+            </tr>
+            {% for price in prices %}
+            <tr>
+                <td>{{ price.date or '' }}</td>
+                <td>{{ price.high or '' }}</td>
+                <td>{{ price.low or '' }}</td>
+                <td>{{ price.open or '' }}</td>
+                <td>{{ price.close or '' }}</td>
+                <td>{{ price.volume or '' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% else %}
+    <li><em>No data</em>
+{% endif %}

@@ -1,0 +1,31 @@
+{% if trades %}
+    <div>
+        <table>
+            <tr>
+                <th> insider </th>
+                <th> relation </th>
+                <th> last_date </th>
+                <th> transaction_type </th>
+                <th> ownertype </th>
+                <th> shares_traded </th>
+                <th> last_price </th>
+                <th> shares_held </th>
+            </tr>
+            {% for trade in trades %}
+            <tr>
+                <td><a href="{{ url_for('trades_insider', company_code=company.code, insider_name=trade.insider.name) }}">
+                    {{ trade.insider.name or '' }}</a></td>
+                <td>{{ trade.insider.relationtype_code or '' }}</td>
+                <td>{{ trade.last_date or '' }}</td>
+                <td>{{ trade.transactiontype_code or '' }}</td>
+                <td>{{ trade.insider.ownertype_code or '' }}</td>
+                <td>{{ trade.shares_traded or '' }}</td>
+                <td>{{ trade.last_price or '' }}</td>
+                <td>{{ trade.shares_held or '' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% else %}
+    <li><em>No data</em>
+{% endif %}

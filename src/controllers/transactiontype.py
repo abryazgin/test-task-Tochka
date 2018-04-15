@@ -1,19 +1,11 @@
 from database import models as md
 
 
-def save(session, code):
-    obj = md.TransactionType(code=code)
-    session.add(obj)
-    session.flush()
-    return obj
-
-
-def get(session, code):
-    return session.query(md.TransactionType).get(code)
-
-
 def get_or_save(session, code):
-    obj = get(session=session, code=code)
-    if obj:
-        return obj
-    return save(session=session, code=code)
+    """ Дай если есть. Если нет - создай и верни """
+    obj = session.query(md.TransactionType).get(code)
+    if not obj:
+        obj = md.TransactionType(code=code)
+        session.add(obj)
+        session.flush()
+    return obj

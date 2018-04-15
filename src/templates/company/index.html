@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class=company>
+        <h2>About {{ company.code }}</h2>
+
+        {% if with_prices %} {% include "company/_prices.html" %} {% endif %}
+        {% if with_trades %} {% include "company/_trades.html" %} {% endif %}
+        {% if with_intervals %} {% include "company/_intervals.html" %} {% endif %}
+
+    </div>
+{% endblock %}

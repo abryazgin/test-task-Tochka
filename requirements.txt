@@ -5,3 +5,4 @@ lxml==4.2.1
 requests==2.18.4
 pytest==3.5.0
 click==6.7
+simplejson==3.13.2
