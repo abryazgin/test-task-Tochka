@@ -1,4 +1,4 @@
-#[Задача](https://github.com/Life1over/test-task/blob/master/python.md):
+# [Задача](https://github.com/Life1over/test-task/blob/master/python.md):
 
 ## Само задание: 
 - [http://www.nasdaq.com/symbol/cvx/historical](http://www.nasdaq.com/symbol/cvx/historical)
@@ -31,7 +31,7 @@
 
 
 
-#Краткое описание решения:
+# Краткое описание решения:
 
 1. Использовал:
  * Python 3.5.2
