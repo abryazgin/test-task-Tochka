@@ -2,6 +2,8 @@ from database import models as md
 from datetime import datetime, timedelta
 from collections import namedtuple
 
+db = md.db
+
 
 def list_last(company_code, from_date=None, to_date=None):
     """
@@ -78,46 +80,57 @@ def get_minimal_delta_intervals(company_code, delta, price_type, limit=20):
     :param price_type: тип цены (open/high/low/close)
     :param limit: количество интервалов
     """
-    intervals = []
-    # делаем копию итератора дельт
-    from itertools import tee
-    company, deltas = list_deltas(company_code=company_code)
-    deltas_from, deltas_to = tee(deltas, 2)
+    company = md.Company.query.get_or_404(company_code)
 
-    def add_interval(from_delta, to_delta, delta_):
-        intervals.append(
-            DeltaInterval(
-                from_date=from_delta.date,
-                to_date=to_delta.date,
-                length=(to_delta.date - from_delta.date).days + 1,
-                delta=delta_,
-            )
+    assert price_type in ('open', 'high', 'low', 'close')
+
+    # TODO add temporary tables and indexes on them (for example: `deltas`)
+    query = db.session.execute('''
+        WITH RECURSIVE deltas (D, DELTA) AS (
+            SELECT
+                    CUR.DATE, CUR.{price_type} - PREV.{price_type}
+                FROM
+                    stock_price CUR
+                    JOIN stock_price PREV
+                        ON CUR.DATE = PREV.DATE + INTERVAL '1 DAY'
+                        AND CUR.COMPANY_CODE = PREV.COMPANY_CODE
+                WHERE
+                    CUR.COMPANY_CODE = :company_code
+        ), intervals (I_FROM, I_TO, LENGTH, DELTA) AS (
+            SELECT
+                    BASE.D AS I_FROM, BASE.D AS I_TO, 1 AS LENGTH, BASE.DELTA
+                FROM
+                    deltas BASE
+            UNION ALL
+            SELECT
+                    I.I_FROM AS I_FROM, D.D AS I_TO,
+                    I.LENGTH + 1 AS LENGTH, I.DELTA + D.DELTA AS DELTA
+                FROM
+                    intervals I
+                    JOIN deltas D
+                        ON I.I_TO + INTERVAL '1 DAY' = D.D
+                        AND SIGN(I.DELTA + D.DELTA) = SIGN(I.DELTA)
+                        AND ABS(I.DELTA) < :delta
         )
-
-    cur_delta = 0
-    candidate = None
-
-    for to in deltas_to:
-        if candidate:
-            if abs(cur_delta) >= delta:
-                # old from, new to
-                candidate = candidate[0], to, cur_delta
-                # уменьшаем дельту на "убранный" день
-                cur_delta -= getattr(to, price_type)
-                continue
-            else:
-                add_interval(*candidate)
-                candidate = None
-        for from_ in deltas_from:
-            # увеличиваем дельту на "добавленный" день
-            cur_delta += getattr(from_, price_type)
-            if abs(cur_delta) >= delta:
-                candidate = from_, to, cur_delta
-                break
-        # уменьшаем дельту на "убранный" день
-        cur_delta -= getattr(to, price_type)
-    return company, sorted(
-        intervals, key=lambda v: (v.length, -abs(v.delta)))[:limit]
+        SELECT
+                I.I_FROM, I.I_TO, I.LENGTH, I.DELTA
+            FROM
+                intervals I
+                LEFT JOIN intervals I_INNER
+                    ON I.I_FROM < I_INNER.I_FROM
+                    AND I.I_TO >= I_INNER.I_TO
+                    AND ABS(I_INNER.DELTA) >= :delta
+            WHERE
+                ABS(I.DELTA) >= :delta
+                AND I_INNER.I_FROM IS NULL
+            ORDER BY
+                I.LENGTH, ABS(I.DELTA) DESC
+            LIMIT :limit;
+        '''.format(price_type=price_type), dict(
+            limit=limit, delta=delta, company_code=company.code))
+    return company, (
+        DeltaInterval(row[0], row[1], row[2], row[3]) for row in query
+    )
 
 
 def get_or_save(session, company_code, date, high, low, open_, close, volume):
