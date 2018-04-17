@@ -39,9 +39,7 @@
  * ORM - Flask-SQLAlchemy
  * DB - PostgreSQL
  
-2. По п.7 сделал [фидл](http://www.sqlfiddle.com/#!17/5033e/5/0), чтобы поиграться и понять как работает
-
-3. Структура БД и скрипт парсинга
+2. Структура БД и скрипт парсинга
     1. Структура БД [тут](https://github.com/bryazginnn/test-task-Tochka/blob/master/src/database/models.py)
     1. Скрипт парсинга данных по акциям с сайта [тут](https://github.com/bryazginnn/test-task-Tochka/blob/master/bin/parse_using_file.py). Пример использования:
     
@@ -78,7 +76,7 @@
     DOWNLOADING: https://www.nasdaq.com/symbol/goog/insider-trades?page=9
     DOWNLOADING: https://www.nasdaq.com/symbol/goog/insider-trades?page=10
     ```
-4. Установка:
+3. Установка:
 ```bash
 # качаем
 git clone git@github.com:bryazginnn/test-task-Tochka.git test_task

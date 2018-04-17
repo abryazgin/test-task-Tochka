@@ -64,17 +64,6 @@ def get_minimal_delta_intervals(company_code, delta, price_type, limit=20):
         Получение минимальных интервалов с изменением цены <price_type>
     на акции <company_code> не меньше чем на <delta>
 
-    Принцип:
-    0) ставим "дата с" = "дата по" = началу
-    1) сдвигаем "дата с" вниз пока не превысим дельту
-    2) как только превысили дельту сохраняем интервал как кандидата в памяти
-    3) сдвигаем "дату по" вниз, если при сдвиге дельта не меньше порога,
-        То сохраняем интервал как нового кадидата и повторяем п.3.
-        Иначе - сохраняем текущего кандидата и переходим к п.1
-
-    по исчерпании дат, возвращаем первые <limit> интервалов сортируя
-    их по величине интервала от меньшего к большему
-
     :param company_code: код акции/компаниии
     :param delta: значение порога изменения
     :param price_type: тип цены (open/high/low/close)
@@ -86,7 +75,7 @@ def get_minimal_delta_intervals(company_code, delta, price_type, limit=20):
 
     # TODO add temporary tables and indexes on them (for example: `deltas`)
     query = db.session.execute('''
-        WITH RECURSIVE deltas (D, DELTA) AS (
+        WITH deltas (D, DELTA) AS (
             SELECT
                     CUR.DATE, CUR.{price_type} - PREV.{price_type}
                 FROM
@@ -98,27 +87,27 @@ def get_minimal_delta_intervals(company_code, delta, price_type, limit=20):
                     CUR.COMPANY_CODE = :company_code
         ), intervals (I_FROM, I_TO, LENGTH, DELTA) AS (
             SELECT
-                    BASE.D AS I_FROM, BASE.D AS I_TO, 1 AS LENGTH, BASE.DELTA
+                    F.D AS I_FROM, T.D AS I_TO,
+                    T.D - F.D + 1,
+                    SUM(D_INNER.DELTA) AS DELTA
                 FROM
-                    deltas BASE
-            UNION ALL
-            SELECT
-                    I.I_FROM AS I_FROM, D.D AS I_TO,
-                    I.LENGTH + 1 AS LENGTH, I.DELTA + D.DELTA AS DELTA
-                FROM
-                    intervals I
-                    JOIN deltas D
-                        ON I.I_TO + INTERVAL '1 DAY' = D.D
-                        AND SIGN(I.DELTA + D.DELTA) = SIGN(I.DELTA)
-                        AND ABS(I.DELTA) < :delta
+                    deltas F
+                    JOIN deltas T
+                        ON F.D <= T.D
+                    JOIN deltas D_INNER
+                        ON F.D <= D_INNER.D
+                        AND D_INNER.D <= T.D
+                GROUP BY
+                    F.D, T.D
         )
         SELECT
                 I.I_FROM, I.I_TO, I.LENGTH, I.DELTA
             FROM
                 intervals I
                 LEFT JOIN intervals I_INNER
-                    ON I.I_FROM < I_INNER.I_FROM
+                    ON I.I_FROM <= I_INNER.I_FROM
                     AND I.I_TO >= I_INNER.I_TO
+                    AND I_INNER.LENGTH < I.LENGTH
                     AND ABS(I_INNER.DELTA) >= :delta
             WHERE
                 ABS(I.DELTA) >= :delta
